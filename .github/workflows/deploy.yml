@@ -55,10 +55,19 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
 
+      # - name: Update Kubernetes Manifest
+      #   run: |
+      #     # Replace placeholder with actual image name in manifest
+      #     sed -i "s|ghcr.io/\${{ github.repository }}:latest|${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest|g" k8s/deployment.yaml
+
+      - name: Prepare image name
+        run: |
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE=${{ env.REGISTRY }}/${REPO_LOWER}:latest" >> $GITHUB_ENV
+
       - name: Update Kubernetes Manifest
         run: |
-          # Replace placeholder with actual image name in manifest
-          sed -i "s|ghcr.io/\${{ github.repository }}:latest|${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest|g" k8s/deployment.yaml
+          sed -i "s|ghcr.io/.*/.*:latest|${IMAGE}|g" k8s/deployment.yaml
 
       - name: Deploy to K8s
         run: |

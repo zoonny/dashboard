@@ -34,3 +34,17 @@ sudo ./svc.sh start
 # Use this YAML in your workflow file for each job
 runs-on: self-hosted
 ```
+
+### CI/CI Error
+
+
+```shell
+kubectl describe pod transition-dashboard-b54dcdf9-v64ts
+
+# Events:
+#   Type     Reason         Age                    From               Message
+#   ----     ------         ----                   ----               -------
+#   Normal   Scheduled      3m46s                  default-scheduler  Successfully assigned default/transition-dashboard-b54dcdf9-v64ts to k8s-worker-01
+#   Warning  Failed         103s (x12 over 3m46s)  kubelet            Error: InvalidImageName
+#   Warning  InspectFailed  88s (x13 over 3m46s)   kubelet            Failed to apply default image tag "ghcr.io/${{ github.repository }}:latest": couldn't parse image name "ghcr.io/${{ github.repository }}:latest": invalid reference format
+```
