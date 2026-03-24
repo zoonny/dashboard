@@ -32,11 +32,36 @@ kind: Service
 metadata:
   name: transition-dashboard-service
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: transition-dashboard
   ports:
     - protocol: TCP
       port: 80
       targetPort: 3000
-      nodePort: 30080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: transition-dashboard-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: letsencrypt-prod   # ClusterIssuer 이름과 동일해야 함
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - dev-x.store
+    secretName: webserver-tls
+  rules:
+  - host: dev-x.store
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: transition-dashboard-service
+            port:
+              number: 80
