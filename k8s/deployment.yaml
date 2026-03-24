@@ -58,7 +58,7 @@ spec:
   - host: dev-x.store
     http:
       paths:
-      - path: /
+      - path: /dashboard
         pathType: Prefix
         backend:
           service:
