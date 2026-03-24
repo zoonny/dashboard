@@ -10,6 +10,8 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Ensure public directory exists before build to avoid COPY errors
+RUN mkdir -p public
 RUN npm install -g pnpm && pnpm build
 
 # Stage 3: Runner
