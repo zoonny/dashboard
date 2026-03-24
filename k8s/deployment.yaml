@@ -14,9 +14,13 @@ spec:
       labels:
         app: transition-dashboard
     spec:
+      # GHCR 이미지가 private 이면 아래 imagePullSecrets를 사용
+      # imagePullSecrets:
+      #   - name: ghcr-pull-secret
       containers:
       - name: dashboard
-        image: ghcr.io/${{ github.repository }}:latest
+        image: __IMAGE__
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
         resources:
