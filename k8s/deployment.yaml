@@ -56,13 +56,13 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - dev-x.store
+    - dashboard.dev-x.store
     secretName: webserver-tls
   rules:
-  - host: dev-x.store
+  - host: dashboard.dev-x.store
     http:
       paths:
-      - path: /dashboard
+      - path: /
         pathType: Prefix
         backend:
           service:
