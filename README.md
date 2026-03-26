@@ -1,5 +1,26 @@
 # dashboard
 
+### branch 전략
+
+브랜치 타입 prefix
+
+|prefix|설명|예시|
+|--|--|--|
+|feat|새로운 기능 개발|feat/login-page|
+|fix버그 수정|fix/auth-token-expire|
+|hotfix|운영 긴급 버그 수정|hotfix/payment-null-error|
+|chore|빌드, 설정, 패키지 등 기능과 무관한 작업|chore/update-dependencies|
+|refactor|기능 변경 없이 코드 구조 개선|refactor/user-service|
+|docs|문서 작성/수정|docs/api-readme|
+|style|코드 포맷팅, 세미콜론 등 스타일만 변경|style/eslint-fix|
+|test|테스트 코드 추가/수정|test/order-service-unit|
+|perf|성능 개선|perf/image-lazy-loading|
+|ci|CI/CD 파이프라인 설정|ci/github-actions-deploy|
+|release|배포 준비 브랜치|release/v1.2.0|
+
+
+### postgresql 접속
+
 ```shell
 # psql postgresql://appuser:New1234@10.0.0.4:30418/appdb
 psql postgresql://postgres:New1234@10.0.0.4:30418/postgres
