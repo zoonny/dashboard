@@ -69,3 +69,18 @@ kubectl describe pod transition-dashboard-b54dcdf9-v64ts
 #   Warning  Failed         103s (x12 over 3m46s)  kubelet            Error: InvalidImageName
 #   Warning  InspectFailed  88s (x13 over 3m46s)   kubelet            Failed to apply default image tag "ghcr.io/${{ github.repository }}:latest": couldn't parse image name "ghcr.io/${{ github.repository }}:latest": invalid reference format
 ```
+
+### ArgoCD
+
+```shell
+# Install ArgoCD
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+kubectl port-forward svc/argocd-server -n argocd 38080:443
+
+# 초기 비밀번호 확인
+kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 -d
+
+# applicatio 등록
+```
