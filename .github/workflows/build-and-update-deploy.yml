@@ -49,45 +49,45 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.image }}
 
-  deploy:
-    needs: build-and-push
-    runs-on: self-hosted
+    deploy:
+      needs: build-and-push
+      runs-on: self-hosted
 
-    env:
-      IMAGE: ${{ needs.build-and-push.outputs.image }}
+      env:
+        IMAGE: ${{ needs.build-and-push.outputs.image }}
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
 
-      - name: Set up kubeconfig
-        shell: bash
-        run: |
-          mkdir -p "${HOME}/.kube"
-          printf '%s' "${{ secrets.KUBE_CONFIG }}" > "${HOME}/.kube/config"
-          chmod 600 "${HOME}/.kube/config"
+        - name: Set up kubeconfig
+          shell: bash
+          run: |
+            mkdir -p "${HOME}/.kube"
+            printf '%s' "${{ secrets.KUBE_CONFIG }}" > "${HOME}/.kube/config"
+            chmod 600 "${HOME}/.kube/config"
 
-      - name: Render manifest
-        shell: bash
-        run: |
-          sed "s|__IMAGE__|${IMAGE}|g" "${MANIFEST_PATH}" > /tmp/rendered-deployment.yaml
-          echo "Rendered image:"
-          grep -n "image:" /tmp/rendered-deployment.yaml
+        - name: Render manifest
+          shell: bash
+          run: |
+            sed "s|__IMAGE__|${IMAGE}|g" "${MANIFEST_PATH}" > /tmp/rendered-deployment.yaml
+            echo "Rendered image:"
+            grep -n "image:" /tmp/rendered-deployment.yaml
 
-      - name: Deploy to Kubernetes
-        shell: bash
-        run: |
-          kubectl apply -n "${K8S_NAMESPACE}" -f /tmp/rendered-deployment.yaml
-          kubectl rollout status deployment/"${APP_NAME}" -n "${K8S_NAMESPACE}" --timeout=180s
-          echo "Deployed image:"
-          kubectl get deployment "${APP_NAME}" -n "${K8S_NAMESPACE}" \
-            -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+        - name: Deploy to Kubernetes
+          shell: bash
+          run: |
+            kubectl apply -n "${K8S_NAMESPACE}" -f /tmp/rendered-deployment.yaml
+            kubectl rollout status deployment/"${APP_NAME}" -n "${K8S_NAMESPACE}" --timeout=180s
+            echo "Deployed image:"
+            kubectl get deployment "${APP_NAME}" -n "${K8S_NAMESPACE}" \
+              -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
 
-      - name: Debug on failure
-        if: failure()
-        shell: bash
-        run: |
-          kubectl get all -n "${K8S_NAMESPACE}"
-          kubectl get pods -n "${K8S_NAMESPACE}" -l app="${APP_NAME}" -o wide
-          kubectl describe deployment "${APP_NAME}" -n "${K8S_NAMESPACE}"
-          kubectl describe pod -n "${K8S_NAMESPACE}" -l app="${APP_NAME}"
+        - name: Debug on failure
+          if: failure()
+          shell: bash
+          run: |
+            kubectl get all -n "${K8S_NAMESPACE}"
+            kubectl get pods -n "${K8S_NAMESPACE}" -l app="${APP_NAME}" -o wide
+            kubectl describe deployment "${APP_NAME}" -n "${K8S_NAMESPACE}"
+            kubectl describe pod -n "${K8S_NAMESPACE}" -l app="${APP_NAME}"
