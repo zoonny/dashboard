@@ -82,5 +82,57 @@ kubectl port-forward svc/argocd-server -n argocd 38080:443
 # 초기 비밀번호 확인
 kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 -d
 
-# applicatio 등록
+# application 등록
+# argocd ui --> repository 등록 --> application 등록 --> Sync
+
+argocd repo add https://github.com/zoonny/deploy-repo.git \
+  --username zoonny \
+  --password <GITHUB_TOKEN>
+
+argocd repo list
+
+kubectl apply -n argocd -f application-dev.yaml
+```
+
+### 오류해결 프롬포튼
+
+```text
+gitbut action으로 deploy 시에 아래 [오류]가 발생하는데 [deploy-repo 디렉토리 구조]와 [github workflows yaml 파일]을 분석해서 오류를 해결해줘. 차근차근 생각해서 오류를 완벽히 해결해줘.
+
+[오류]
+Run sed -i "s|newTag:.*|newTag: ${GITHUB_SHA}|g" dashboard-deploy/overlays/dev/kustomization.yaml
+sed: can't read dashboard-deploy/overlays/dev/kustomization.yaml: No such file or directory
+Error: Process completed with exit code 2.
+
+[deploy-repo 디렉토리 구조]
+deploy-repo/
+├── dashboard-deploy/
+    ├── argocd
+    ├── base
+    ├── overlays/dev
+
+[github workflows yaml 파일]
+  ...
+  update-deploy-repo:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v4
+        with:
+          repository: zoonny/deploy-repo
+          token: ${{ secrets.DEPLOY_REPO_TOKEN }}
+          path: dashboard-deploy
+
+      - name: Update dev image tag
+        shell: bash
+        run: |
+          ls -alt
+          sed -i "s|newTag:.*|newTag: ${GITHUB_SHA}|g" dashboard-deploy/overlays/dev/kustomization.yaml
+          git config user.name "zoonny"
+          git config user.email "hyungii@naver.com"
+          git add dashboard-deploy/overlays/dev/kustomization.yaml
+          git commit -m "Update dev image to ${GITHUB_SHA}" || echo "No changes to commit"
+          git push
 ```
