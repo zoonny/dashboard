@@ -64,8 +64,7 @@ jobs:
       - name: Update dev image tag
         shell: bash
         run: |
-          pwd
-          cd deploy-repo/
+          ls -alt
           sed -i "s|newTag:.*|newTag: ${GITHUB_SHA}|g" overlays/dev/kustomization.yaml
           git config user.name "zoonny"
           git config user.email "hyungii@naver.com"
