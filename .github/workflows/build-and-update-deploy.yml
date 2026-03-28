@@ -64,13 +64,9 @@ jobs:
       - name: Update dev image tag
         shell: bash
         run: |
-          ls -alt
-          cd dashboard-deploy
-          echo "=================================================="
-          ls -alt
-          sed -i "s|newTag:.*|newTag: ${GITHUB_SHA}|g" overlays/dev/kustomization.yaml
+          sed -i "s|newTag:.*|newTag: ${GITHUB_SHA}|g" dashboard-deploy/overlays/dev/kustomization.yaml
           git config user.name "zoonny"
           git config user.email "hyungii@naver.com"
-          git add overlays/dev/kustomization.yaml
+          git add dashboard-deploy/overlays/dev/kustomization.yaml
           git commit -m "Update dev image to ${GITHUB_SHA}" || echo "No changes to commit"
           git push
