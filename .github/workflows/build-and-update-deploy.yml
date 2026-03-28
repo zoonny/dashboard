@@ -65,6 +65,7 @@ jobs:
         shell: bash
         run: |
           ls -alt
+          cd dashboard-deploy
           sed -i "s|newTag:.*|newTag: ${GITHUB_SHA}|g" overlays/dev/kustomization.yaml
           git config user.name "zoonny"
           git config user.email "hyungii@naver.com"
