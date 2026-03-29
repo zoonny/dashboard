@@ -94,7 +94,7 @@ argocd repo list
 kubectl apply -n argocd -f application-dev.yaml
 ```
 
-### 오류해결 프롬포튼
+#### Argo 오류해결 prompt
 
 ```text
 gitbut action으로 deploy 시에 아래 [오류]가 발생하는데 [deploy-repo 디렉토리 구조]와 [github workflows yaml 파일]을 분석해서 오류를 해결해줘. 차근차근 생각해서 오류를 완벽히 해결해줘.
@@ -135,4 +135,25 @@ deploy-repo/
           git add dashboard-deploy/overlays/dev/kustomization.yaml
           git commit -m "Update dev image to ${GITHUB_SHA}" || echo "No changes to commit"
           git push
+```
+
+### git commit
+
+```shell
+git log --oneline
+# e354bf5 ci: fixed yaml
+# 00563a8 ci: fixed yaml
+# 4657a5d ci: fixed yaml
+
+# 여러개의 commit 합치기
+git rebase -i HEAD~8
+# pick e354bf5 ci: fixed yaml
+# squash 00563a8 ci: fixed yaml
+# squash 4657a5d ci: fixed yaml
+
+git push --force-with-lease
+
+# more simple...
+git reset --soft HEAD~8
+git commit -m "ci: fixed yaml"
 ```

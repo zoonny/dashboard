@@ -1,0 +1,927 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ide-bg: #1e1e1e;
+    --ide-sidebar: #252526;
+    --ide-tab-bar: #2d2d2d;
+    --ide-tab-active: #1e1e1e;
+    --ide-tab-inactive: #2d2d2d;
+    --ide-border: #3c3c3c;
+    --ide-text: #d4d4d4;
+    --ide-text-muted: #858585;
+    --ide-text-dim: #6a6a6a;
+    --ide-accent: #0078d4;
+    --ide-accent-hover: #1184db;
+    --ide-selection: #264f78;
+    --ide-line-num: #5a5a5a;
+    --ide-statusbar: #007acc;
+    --ide-activity: #333333;
+    --ide-hover: #2a2d2e;
+    --ide-terminal: #1e1e1e;
+    --s-keyword: #569cd6;
+    --s-string: #ce9178;
+    --s-comment: #6a9955;
+    --s-function: #dcdcaa;
+    --s-type: #4ec9b0;
+    --s-number: #b5cea8;
+    --s-operator: #d4d4d4;
+    --s-variable: #9cdcfe;
+    --s-property: #9cdcfe;
+    --s-decorator: #c586c0;
+  }
+  #ide-root {
+    width: 100%; height: 700px;
+    background: var(--ide-bg);
+    color: var(--ide-text);
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 1px solid var(--ide-border);
+  }
+  .ide-titlebar {
+    height: 30px;
+    background: #323233;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+    border-bottom: 1px solid var(--ide-border);
+    flex-shrink: 0;
+    font-family: -apple-system, sans-serif;
+    font-size: 12px;
+    color: var(--ide-text-muted);
+    user-select: none;
+  }
+  .titlebar-dots { display: flex; gap: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-red { background: #ff5f57; }
+  .dot-yellow { background: #febc2e; }
+  .dot-green { background: #28c840; }
+  .titlebar-title { flex: 1; text-align: center; font-size: 12px; }
+  .ide-main { display: flex; flex: 1; overflow: hidden; }
+  .ide-activity-bar {
+    width: 48px;
+    background: var(--ide-activity);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0;
+    gap: 4px;
+    border-right: 1px solid var(--ide-border);
+    flex-shrink: 0;
+  }
+  .activity-icon {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--ide-text-muted);
+    transition: color 0.15s, background 0.15s;
+    font-size: 18px;
+    position: relative;
+  }
+  .activity-icon:hover { color: var(--ide-text); }
+  .activity-icon.active { color: white; border-left: 2px solid white; margin-left: -2px; }
+  .activity-icon.active::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--ide-accent); border-radius: 0 2px 2px 0; }
+  .ide-sidebar {
+    width: 220px;
+    background: var(--ide-sidebar);
+    border-right: 1px solid var(--ide-border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+    transition: width 0.2s;
+  }
+  .ide-sidebar.hidden { width: 0; }
+  .sidebar-header {
+    padding: 10px 12px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--ide-text-muted);
+    text-transform: uppercase;
+    font-family: -apple-system, sans-serif;
+    flex-shrink: 0;
+  }
+  .file-tree { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+  .file-tree::-webkit-scrollbar { width: 4px; }
+  .file-tree::-webkit-scrollbar-track { background: transparent; }
+  .file-tree::-webkit-scrollbar-thumb { background: #555; border-radius: 2px; }
+  .tree-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px 3px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: -apple-system, sans-serif;
+    color: var(--ide-text);
+    user-select: none;
+    white-space: nowrap;
+  }
+  .tree-item:hover { background: var(--ide-hover); }
+  .tree-item.selected { background: #04395e; }
+  .tree-item.folder { font-weight: 400; }
+  .tree-item .icon { font-size: 14px; flex-shrink: 0; }
+  .tree-item .arrow { font-size: 10px; color: var(--ide-text-muted); margin-right: 2px; transition: transform 0.15s; }
+  .tree-item.open .arrow { transform: rotate(90deg); }
+  .tree-children { display: none; }
+  .tree-children.open { display: block; }
+  .tree-children .tree-item { padding-left: 32px; }
+  .ide-editor-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .tab-bar {
+    height: 35px;
+    background: var(--ide-tab-bar);
+    display: flex;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--ide-border);
+    overflow-x: auto;
+    flex-shrink: 0;
+  }
+  .tab-bar::-webkit-scrollbar { height: 0; }
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    height: 34px;
+    border-right: 1px solid var(--ide-border);
+    cursor: pointer;
+    font-size: 13px;
+    font-family: -apple-system, sans-serif;
+    color: var(--ide-text-muted);
+    background: var(--ide-tab-inactive);
+    white-space: nowrap;
+    user-select: none;
+    position: relative;
+    flex-shrink: 0;
+    transition: color 0.1s;
+  }
+  .tab:hover { color: var(--ide-text); background: var(--ide-hover); }
+  .tab.active {
+    background: var(--ide-tab-active);
+    color: var(--ide-text);
+    border-top: 1px solid var(--ide-accent);
+  }
+  .tab-close {
+    font-size: 14px;
+    color: transparent;
+    border-radius: 3px;
+    padding: 1px 2px;
+    transition: color 0.1s, background 0.1s;
+  }
+  .tab:hover .tab-close { color: var(--ide-text-muted); }
+  .tab-close:hover { color: white !important; background: rgba(255,255,255,0.1); }
+  .tab-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ide-text-muted); }
+  .editor-container {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+  }
+  .line-numbers {
+    width: 48px;
+    padding: 14px 8px 14px 0;
+    text-align: right;
+    color: var(--ide-line-num);
+    font-size: 13px;
+    line-height: 1.55;
+    user-select: none;
+    background: var(--ide-bg);
+    border-right: 1px solid var(--ide-border);
+    flex-shrink: 0;
+    overflow: hidden;
+    font-family: 'Consolas', monospace;
+  }
+  .code-content {
+    flex: 1;
+    padding: 14px 0 14px 16px;
+    overflow: auto;
+    line-height: 1.55;
+    white-space: pre;
+    font-size: 13px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    background: var(--ide-bg);
+    cursor: text;
+    outline: none;
+  }
+  .code-content::-webkit-scrollbar { width: 8px; height: 8px; }
+  .code-content::-webkit-scrollbar-track { background: #1e1e1e; }
+  .code-content::-webkit-scrollbar-thumb { background: #424242; border-radius: 4px; }
+  .minimap {
+    width: 60px;
+    background: #1a1a1a;
+    border-left: 1px solid var(--ide-border);
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .minimap canvas { display: block; }
+  .bottom-panel {
+    height: 160px;
+    background: var(--ide-terminal);
+    border-top: 1px solid var(--ide-border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    transition: height 0.2s;
+  }
+  .bottom-panel.hidden { height: 0; }
+  .panel-tabs {
+    display: flex;
+    align-items: center;
+    height: 30px;
+    background: #252526;
+    border-bottom: 1px solid var(--ide-border);
+    padding: 0 8px;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .panel-tab {
+    padding: 4px 12px;
+    font-size: 12px;
+    font-family: -apple-system, sans-serif;
+    color: var(--ide-text-muted);
+    cursor: pointer;
+    border-radius: 3px;
+    user-select: none;
+  }
+  .panel-tab:hover { color: var(--ide-text); }
+  .panel-tab.active { color: var(--ide-text); border-bottom: 1px solid var(--ide-accent); border-radius: 0; }
+  .panel-content { flex: 1; overflow-y: auto; padding: 8px 12px; font-size: 13px; }
+  .panel-content::-webkit-scrollbar { width: 4px; }
+  .panel-content::-webkit-scrollbar-thumb { background: #555; border-radius: 2px; }
+  .terminal-line { line-height: 1.5; }
+  .terminal-line.cmd { color: #569cd6; }
+  .terminal-line.out { color: #d4d4d4; }
+  .terminal-line.err { color: #f48771; }
+  .terminal-line.ok { color: #4ec9b0; }
+  .terminal-prompt { display: flex; align-items: center; gap: 4px; }
+  .terminal-input {
+    background: transparent; border: none; outline: none;
+    color: var(--ide-text); font-family: 'Consolas', monospace;
+    font-size: 13px; flex: 1; caret-color: #aeafad;
+  }
+  .ide-statusbar {
+    height: 22px;
+    background: var(--ide-statusbar);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 16px;
+    font-size: 12px;
+    font-family: -apple-system, sans-serif;
+    color: rgba(255,255,255,0.9);
+    flex-shrink: 0;
+  }
+  .statusbar-item { display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 0 4px; }
+  .statusbar-item:hover { background: rgba(255,255,255,0.1); }
+  .statusbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .ai-panel {
+    width: 0;
+    background: #1f1f1f;
+    border-left: 1px solid var(--ide-border);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.2s;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .ai-panel.open { width: 280px; }
+  .ai-header {
+    padding: 12px 14px 10px;
+    font-family: -apple-system, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ide-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--ide-border);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .ai-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .ai-messages::-webkit-scrollbar { width: 4px; }
+  .ai-messages::-webkit-scrollbar-thumb { background: #555; border-radius: 2px; }
+  .ai-msg {
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: -apple-system, sans-serif;
+    line-height: 1.5;
+    max-width: 100%;
+    word-wrap: break-word;
+  }
+  .ai-msg.user { background: #264f78; color: #cce4f7; align-self: flex-end; }
+  .ai-msg.assistant { background: #2a2a2a; color: var(--ide-text); border: 1px solid var(--ide-border); }
+  .ai-msg.thinking { color: var(--ide-text-muted); font-style: italic; }
+  .ai-input-area {
+    padding: 10px;
+    border-top: 1px solid var(--ide-border);
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+  .ai-textarea {
+    flex: 1;
+    background: #2d2d2d;
+    border: 1px solid var(--ide-border);
+    border-radius: 6px;
+    color: var(--ide-text);
+    font-family: -apple-system, sans-serif;
+    font-size: 12px;
+    padding: 6px 8px;
+    outline: none;
+    resize: none;
+    min-height: 32px;
+    max-height: 80px;
+  }
+  .ai-textarea:focus { border-color: var(--ide-accent); }
+  .ai-send-btn {
+    width: 28px; height: 28px;
+    background: var(--ide-accent);
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .ai-send-btn:hover { background: var(--ide-accent-hover); }
+  .kw { color: var(--s-keyword); }
+  .str { color: var(--s-string); }
+  .cmt { color: var(--s-comment); }
+  .fn { color: var(--s-function); }
+  .tp { color: var(--s-type); }
+  .num { color: var(--s-number); }
+  .vr { color: var(--s-variable); }
+  .dc { color: var(--s-decorator); }
+  .pr { color: var(--s-property); }
+  .breadcrumb {
+    height: 24px;
+    background: var(--ide-bg);
+    border-bottom: 1px solid var(--ide-border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 4px;
+    font-size: 12px;
+    font-family: -apple-system, sans-serif;
+    color: var(--ide-text-muted);
+    flex-shrink: 0;
+  }
+  .breadcrumb span { cursor: pointer; }
+  .breadcrumb span:hover { color: var(--ide-text); }
+  .breadcrumb-sep { opacity: 0.5; }
+</style>
+
+<div id="ide-root">
+  <div class="ide-titlebar">
+    <div class="titlebar-dots">
+      <div class="dot dot-red"></div>
+      <div class="dot dot-yellow"></div>
+      <div class="dot dot-green"></div>
+    </div>
+    <div class="titlebar-title">WebIDE — next-app</div>
+  </div>
+
+  <div class="ide-main">
+    <div class="ide-activity-bar">
+      <div class="activity-icon active" id="act-explorer" title="Explorer" onclick="toggleSidebar()">📁</div>
+      <div class="activity-icon" id="act-search" title="Search" onclick="setActivity('search')">🔍</div>
+      <div class="activity-icon" id="act-git" title="Source Control" onclick="setActivity('git')">⑃</div>
+      <div class="activity-icon" id="act-debug" title="Run & Debug" onclick="setActivity('debug')">▷</div>
+      <div style="flex:1"></div>
+      <div class="activity-icon" id="act-ai" title="AI Assistant" onclick="toggleAI()" style="font-size:14px;">✦</div>
+      <div class="activity-icon" title="Settings" style="font-size:16px;">⚙</div>
+    </div>
+
+    <div class="ide-sidebar" id="sidebar">
+      <div class="sidebar-header">Explorer</div>
+      <div class="file-tree" id="file-tree"></div>
+    </div>
+
+    <div class="ide-editor-area">
+      <div class="tab-bar" id="tab-bar"></div>
+      <div class="breadcrumb" id="breadcrumb">
+        <span>next-app</span>
+        <span class="breadcrumb-sep">›</span>
+        <span>src</span>
+        <span class="breadcrumb-sep">›</span>
+        <span id="breadcrumb-file" style="color:var(--ide-text)">page.tsx</span>
+      </div>
+      <div class="editor-container">
+        <div class="line-numbers" id="line-numbers"></div>
+        <div class="code-content" id="code-content" contenteditable="true" spellcheck="false"></div>
+        <div class="minimap" id="minimap"><canvas id="minimap-canvas" width="60"></canvas></div>
+      </div>
+      <div class="bottom-panel" id="bottom-panel">
+        <div class="panel-tabs">
+          <div class="panel-tab active" onclick="switchPanel('terminal',this)">Terminal</div>
+          <div class="panel-tab" onclick="switchPanel('problems',this)">Problems</div>
+          <div class="panel-tab" onclick="switchPanel('output',this)">Output</div>
+          <div style="margin-left:auto;display:flex;gap:4px;align-items:center;">
+            <div class="panel-tab" onclick="togglePanel()" style="font-size:14px; padding:2px 6px;">✕</div>
+          </div>
+        </div>
+        <div class="panel-content" id="panel-content"></div>
+      </div>
+    </div>
+
+    <div class="ai-panel" id="ai-panel">
+      <div class="ai-header">
+        <span>✦</span> Claude AI
+      </div>
+      <div class="ai-messages" id="ai-messages">
+        <div class="ai-msg assistant">안녕하세요! 코드에 대해 궁금한 게 있으시면 물어보세요. 현재 열린 파일을 분석하거나 코드 작성을 도와드릴 수 있어요.</div>
+      </div>
+      <div class="ai-input-area">
+        <textarea class="ai-textarea" id="ai-input" placeholder="코드에 대해 질문하세요..." rows="1" onkeydown="handleAIKey(event)"></textarea>
+        <button class="ai-send-btn" onclick="sendAIMessage()">↑</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ide-statusbar">
+    <div class="statusbar-item" onclick="togglePanel()">⚡ TypeScript</div>
+    <div class="statusbar-item" id="sb-git">⑃ main</div>
+    <div class="statusbar-item" id="sb-errors">✕ 0  ⚠ 1</div>
+    <div class="statusbar-right">
+      <div class="statusbar-item" id="sb-cursor">Ln 1, Col 1</div>
+      <div class="statusbar-item">UTF-8</div>
+      <div class="statusbar-item">TSX</div>
+      <div class="statusbar-item" onclick="togglePanel()">⬛ Terminal</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const FILES = {
+  'page.tsx': {
+    icon: '⚛',
+    lang: 'tsx',
+    lines: [
+      `<kw>import</kw> <tp>React</tp> <kw>from</kw> <str>'react'</str>`,
+      `<kw>import</kw> { <tp>Metadata</tp> } <kw>from</kw> <str>'next'</str>`,
+      `<kw>import</kw> { <tp>Hero</tp>, <tp>Features</tp>, <tp>Footer</tp> } <kw>from</kw> <str>'@/components'</str>`,
+      ``,
+      `<kw>export const</kw> <pr>metadata</pr>: <tp>Metadata</tp> = {`,
+      `  <pr>title</pr>: <str>'Next.js App'</str>,`,
+      `  <pr>description</pr>: <str>'Built with Next.js App Router'</str>,`,
+      `}`,
+      ``,
+      `<dc>export default function</dc> <fn>Home</fn>() {`,
+      `  <kw>return</kw> (`,
+      `    <str>&lt;main className=</str><str>"min-h-screen"</str><str>&gt;</str>`,
+      `      <str>&lt;Hero /&gt;</str>`,
+      `      <str>&lt;Features /&gt;</str>`,
+      `      <str>&lt;Footer /&gt;</str>`,
+      `    <str>&lt;/main&gt;</str>`,
+      `  )`,
+      `}`,
+    ]
+  },
+  'layout.tsx': {
+    icon: '⚛',
+    lang: 'tsx',
+    lines: [
+      `<kw>import</kw> <kw>type</kw> { <tp>Metadata</tp> } <kw>from</kw> <str>'next'</str>`,
+      `<kw>import</kw> { <fn>Inter</fn> } <kw>from</kw> <str>'next/font/google'</str>`,
+      `<kw>import</kw> <str>'./globals.css'</str>`,
+      ``,
+      `<kw>const</kw> <vr>inter</vr> = <fn>Inter</fn>({ <pr>subsets</pr>: [<str>'latin'</str>] })`,
+      ``,
+      `<kw>export const</kw> <pr>metadata</pr>: <tp>Metadata</tp> = {`,
+      `  <pr>title</pr>: <str>'My App'</str>,`,
+      `}`,
+      ``,
+      `<kw>export default function</kw> <fn>RootLayout</fn>({`,
+      `  <vr>children</vr>,`,
+      `}: {`,
+      `  <pr>children</pr>: <tp>React</tp>.<tp>ReactNode</tp>`,
+      `}) {`,
+      `  <kw>return</kw> (`,
+      `    <str>&lt;html lang=</str><str>"en"</str><str>&gt;</str>`,
+      `      <str>&lt;body className={inter.className}&gt;</str>`,
+      `        {children}`,
+      `      <str>&lt;/body&gt;</str>`,
+      `    <str>&lt;/html&gt;</str>`,
+      `  )`,
+      `}`,
+    ]
+  },
+  'useAuth.ts': {
+    icon: '⚡',
+    lang: 'ts',
+    lines: [
+      `<kw>import</kw> { <vr>useState</vr>, <vr>useEffect</vr>, <vr>useCallback</vr> } <kw>from</kw> <str>'react'</str>`,
+      `<kw>import</kw> { <tp>User</tp>, <tp>AuthState</tp> } <kw>from</kw> <str>'@/types'</str>`,
+      ``,
+      `<kw>interface</kw> <tp>UseAuthReturn</tp> {`,
+      `  <pr>user</pr>: <tp>User</tp> | <kw>null</kw>`,
+      `  <pr>isLoading</pr>: <tp>boolean</tp>`,
+      `  <pr>signIn</pr>: (<vr>email</vr>: <tp>string</tp>, <vr>password</vr>: <tp>string</tp>) => <tp>Promise</tp>&lt;<tp>void</tp>&gt;`,
+      `  <pr>signOut</pr>: () => <tp>Promise</tp>&lt;<tp>void</tp>&gt;`,
+      `}`,
+      ``,
+      `<kw>export function</kw> <fn>useAuth</fn>(): <tp>UseAuthReturn</tp> {`,
+      `  <kw>const</kw> [<vr>user</vr>, <vr>setUser</vr>] = <fn>useState</fn>&lt;<tp>User</tp> | <kw>null</kw>&gt;(<kw>null</kw>)`,
+      `  <kw>const</kw> [<vr>isLoading</vr>, <vr>setIsLoading</vr>] = <fn>useState</fn>(<kw>true</kw>)`,
+      ``,
+      `  <fn>useEffect</fn>(() => {`,
+      `    <cmt>// 세션 복원</cmt>`,
+      `    <fn>checkSession</fn>().finally(() => <vr>setIsLoading</vr>(<kw>false</kw>))`,
+      `  }, [])`,
+      ``,
+      `  <kw>const</kw> <vr>signIn</vr> = <fn>useCallback</fn>(`,
+      `    <kw>async</kw> (<vr>email</vr>: <tp>string</tp>, <vr>password</vr>: <tp>string</tp>) => {`,
+      `      <kw>const</kw> <vr>data</vr> = <kw>await</kw> <fn>fetchAuth</fn>(<vr>email</vr>, <vr>password</vr>)`,
+      `      <vr>setUser</vr>(<vr>data</vr>.<pr>user</pr>)`,
+      `    }, []`,
+      `  )`,
+      ``,
+      `  <kw>return</kw> { <vr>user</vr>, <vr>isLoading</vr>, <vr>signIn</vr>, <vr>signOut</vr>: <kw>async</kw> () => <vr>setUser</vr>(<kw>null</kw>) }`,
+      `}`,
+    ]
+  },
+  'globals.css': {
+    icon: '🎨',
+    lang: 'css',
+    lines: [
+      `<dc>@tailwind</dc> <kw>base</kw>;`,
+      `<dc>@tailwind</dc> <kw>components</kw>;`,
+      `<dc>@tailwind</dc> <kw>utilities</kw>;`,
+      ``,
+      `<pr>:root</pr> {`,
+      `  <pr>--foreground-rgb</pr>: <num>0, 0, 0</num>;`,
+      `  <pr>--background-start-rgb</pr>: <num>214, 219, 220</num>;`,
+      `  <pr>--background-end-rgb</pr>: <num>255, 255, 255</num>;`,
+      `}`,
+      ``,
+      `<dc>@media</dc> (<pr>prefers-color-scheme</pr>: <kw>dark</kw>) {`,
+      `  <pr>:root</pr> {`,
+      `    <pr>--foreground-rgb</pr>: <num>255, 255, 255</num>;`,
+      `    <pr>--background-start-rgb</pr>: <num>0, 0, 0</num>;`,
+      `  }`,
+      `}`,
+      ``,
+      `<pr>body</pr> {`,
+      `  <kw>color</kw>: <fn>rgb</fn>(<kw>var</kw>(<pr>--foreground-rgb</pr>));`,
+      `  <kw>background</kw>: <kw>linear-gradient</kw>(`,
+      `    <kw>to bottom</kw>,`,
+      `    <fn>rgb</fn>(<kw>var</kw>(<pr>--background-start-rgb</pr>)),`,
+      `    <fn>rgb</fn>(<kw>var</kw>(<pr>--background-end-rgb</pr>))`,
+      `  );`,
+      `}`,
+    ]
+  },
+  'package.json': {
+    icon: '📦',
+    lang: 'json',
+    lines: [
+      `{`,
+      `  <str>"name"</str>: <str>"next-app"</str>,`,
+      `  <str>"version"</str>: <str>"0.1.0"</str>,`,
+      `  <str>"private"</str>: <kw>true</kw>,`,
+      `  <str>"scripts"</str>: {`,
+      `    <str>"dev"</str>: <str>"next dev"</str>,`,
+      `    <str>"build"</str>: <str>"next build"</str>,`,
+      `    <str>"start"</str>: <str>"next start"</str>,`,
+      `    <str>"lint"</str>: <str>"next lint"</str>`,
+      `  },`,
+      `  <str>"dependencies"</str>: {`,
+      `    <str>"next"</str>: <str>"14.2.0"</str>,`,
+      `    <str>"react"</str>: <str>"^18"</str>,`,
+      `    <str>"react-dom"</str>: <str>"^18"</str>,`,
+      `    <str>"@tanstack/react-query"</str>: <str>"^5.0.0"</str>`,
+      `  },`,
+      `  <str>"devDependencies"</str>: {`,
+      `    <str>"typescript"</str>: <str>"^5"</str>,`,
+      `    <str>"tailwindcss"</str>: <str>"^3"</str>,`,
+      `    <str>"@types/react"</str>: <str>"^18"</str>`,
+      `  }`,
+      `}`,
+    ]
+  }
+}
+
+const TREE_STRUCTURE = [
+  { name: 'next-app', type: 'folder', open: true, children: [
+    { name: 'src', type: 'folder', open: true, children: [
+      { name: 'app', type: 'folder', open: true, children: [
+        { name: 'page.tsx', type: 'file', file: 'page.tsx' },
+        { name: 'layout.tsx', type: 'file', file: 'layout.tsx' },
+        { name: 'globals.css', type: 'file', file: 'globals.css' },
+      ]},
+      { name: 'hooks', type: 'folder', open: false, children: [
+        { name: 'useAuth.ts', type: 'file', file: 'useAuth.ts' },
+      ]},
+      { name: 'components', type: 'folder', open: false, children: [
+        { name: 'Hero.tsx', type: 'file' },
+        { name: 'Features.tsx', type: 'file' },
+        { name: 'Footer.tsx', type: 'file' },
+      ]},
+    ]},
+    { name: 'package.json', type: 'file', file: 'package.json' },
+    { name: 'tsconfig.json', type: 'file' },
+    { name: 'next.config.js', type: 'file' },
+  ]}
+];
+
+const TERMINAL_HISTORY = [
+  { type: 'cmd', text: '➜  next-app git:(main) ✗' },
+  { type: 'out', text: '' },
+  { type: 'out', text: '> next-app@0.1.0 dev' },
+  { type: 'out', text: '> next dev' },
+  { type: 'out', text: '' },
+  { type: 'ok', text: '  ▲ Next.js 14.2.0' },
+  { type: 'ok', text: '  - Local:        http://localhost:3000' },
+  { type: 'ok', text: '  - Environments: .env.local' },
+  { type: 'out', text: '' },
+  { type: 'ok', text: ' ✓ Starting...' },
+  { type: 'ok', text: ' ✓ Ready in 2.1s' },
+];
+
+const PROBLEMS = [
+  { type: 'err', text: "⚠  src/app/globals.css(1,1): Warning — Unknown at rule @tailwind [css]" },
+  { type: 'out', text: "   src/app/globals.css · line 1" },
+];
+
+let openTabs = ['page.tsx'];
+let activeTab = 'page.tsx';
+let sidebarOpen = true;
+let aiOpen = false;
+let panelOpen = true;
+let activePanel = 'terminal';
+
+function renderTree(nodes, container, depth=0) {
+  nodes.forEach(node => {
+    const el = document.createElement('div');
+    if(node.type === 'folder') {
+      el.className = `tree-item folder${node.open?' open':''}`;
+      el.innerHTML = `<span class="arrow">›</span><span class="icon">${node.open?'📂':'📁'}</span>${node.name}`;
+      el.onclick = (e) => {
+        e.stopPropagation();
+        node.open = !node.open;
+        el.classList.toggle('open', node.open);
+        el.querySelector('.icon').textContent = node.open ? '📂' : '📁';
+        el.querySelector('.arrow').style.transform = node.open ? 'rotate(90deg)' : '';
+        childContainer.style.display = node.open ? 'block' : 'none';
+      };
+      container.appendChild(el);
+      const childContainer = document.createElement('div');
+      childContainer.className = 'tree-children' + (node.open?' open':'');
+      childContainer.style.display = node.open ? 'block' : 'none';
+      if(node.children) renderTree(node.children, childContainer, depth+1);
+      container.appendChild(childContainer);
+    } else {
+      el.className = 'tree-item';
+      const ext = node.name.split('.').pop();
+      const icons = {tsx:'⚛',ts:'⚡',css:'🎨',json:'📦',js:'🟨',md:'📄'};
+      el.innerHTML = `<span class="icon">${icons[ext]||'📄'}</span>${node.name}`;
+      el.onclick = () => {
+        if(node.file) openFile(node.file);
+      };
+      if(depth > 0) el.style.paddingLeft = (16 + depth * 12) + 'px';
+      container.appendChild(el);
+    }
+  });
+}
+
+function openFile(filename) {
+  if(!openTabs.includes(filename)) {
+    openTabs.push(filename);
+  }
+  activeTab = filename;
+  renderTabs();
+  renderEditor();
+  document.getElementById('breadcrumb-file').textContent = filename;
+  document.querySelectorAll('.tree-item').forEach(el => {
+    el.classList.toggle('selected', el.textContent.trim().includes(filename));
+  });
+}
+
+function closeTab(filename, e) {
+  e.stopPropagation();
+  const idx = openTabs.indexOf(filename);
+  openTabs = openTabs.filter(t => t !== filename);
+  if(activeTab === filename) {
+    activeTab = openTabs[Math.max(0, idx-1)] || openTabs[0] || null;
+  }
+  renderTabs();
+  if(activeTab) renderEditor();
+}
+
+function renderTabs() {
+  const bar = document.getElementById('tab-bar');
+  bar.innerHTML = '';
+  openTabs.forEach(f => {
+    const tab = document.createElement('div');
+    tab.className = `tab${f === activeTab ? ' active' : ''}`;
+    const ext = f.split('.').pop();
+    const icons = {tsx:'⚛',ts:'⚡',css:'🎨',json:'📦',js:'🟨',md:'📄'};
+    tab.innerHTML = `<span style="font-size:12px">${icons[ext]||'📄'}</span>${f}<span class="tab-close" onclick="closeTab('${f}',event)">✕</span>`;
+    tab.onclick = () => { activeTab = f; renderTabs(); renderEditor(); document.getElementById('breadcrumb-file').textContent = f; };
+    bar.appendChild(tab);
+  });
+}
+
+function renderEditor() {
+  const file = FILES[activeTab];
+  if(!file) {
+    document.getElementById('code-content').innerHTML = `<span style="color:var(--ide-text-muted);padding:20px;display:block;">파일을 열 수 없습니다.</span>`;
+    document.getElementById('line-numbers').innerHTML = '';
+    return;
+  }
+  const lines = file.lines;
+  let lnHtml = '';
+  let codeHtml = '';
+  lines.forEach((line, i) => {
+    lnHtml += `${i+1}\n`;
+    codeHtml += `<span id="ln${i+1}">${line||' '}</span>\n`;
+  });
+  document.getElementById('line-numbers').innerHTML = lnHtml;
+  document.getElementById('code-content').innerHTML = codeHtml;
+  drawMinimap(lines.length);
+}
+
+function drawMinimap(lineCount) {
+  const canvas = document.getElementById('minimap-canvas');
+  const h = Math.max(lineCount * 2, 160);
+  canvas.height = h;
+  canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(0, 0, 60, h);
+  for(let i = 0; i < lineCount; i++) {
+    const y = i * 2;
+    const w = Math.random() * 35 + 5;
+    const colors = ['#569cd644','#ce917833','#6a995533','#dcdcaa33','#4ec9b033','#d4d4d422'];
+    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+    ctx.fillRect(4, y, w, 1.5);
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fillRect(0, 0, 60, 30);
+}
+
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  document.getElementById('sidebar').classList.toggle('hidden', !sidebarOpen);
+  document.getElementById('act-explorer').classList.toggle('active', sidebarOpen);
+}
+
+function setActivity(name) {
+  document.querySelectorAll('.activity-icon').forEach(el => el.classList.remove('active'));
+}
+
+function toggleAI() {
+  aiOpen = !aiOpen;
+  document.getElementById('ai-panel').classList.toggle('open', aiOpen);
+  document.getElementById('act-ai').classList.toggle('active', aiOpen);
+}
+
+function togglePanel() {
+  panelOpen = !panelOpen;
+  document.getElementById('bottom-panel').classList.toggle('hidden', !panelOpen);
+}
+
+function switchPanel(name, el) {
+  activePanel = name;
+  document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderPanel();
+}
+
+function renderPanel() {
+  const content = document.getElementById('panel-content');
+  if(activePanel === 'terminal') {
+    content.innerHTML = TERMINAL_HISTORY.map(l =>
+      `<div class="terminal-line ${l.type}">${l.text}</div>`
+    ).join('') + `<div class="terminal-prompt">
+      <span class="terminal-line cmd" style="flex-shrink:0">➜ <span style="color:#4ec9b0">next-app</span></span>
+      <input class="terminal-input" id="term-input" onkeydown="handleTermKey(event)" autofocus>
+    </div>`;
+  } else if(activePanel === 'problems') {
+    content.innerHTML = PROBLEMS.map(l =>
+      `<div class="terminal-line ${l.type}">${l.text}</div>`
+    ).join('');
+  } else {
+    content.innerHTML = `<div class="terminal-line out">Next.js 14.2.0 build output</div><div class="terminal-line ok">Compiled successfully</div>`;
+  }
+}
+
+function handleTermKey(e) {
+  if(e.key === 'Enter') {
+    const input = document.getElementById('term-input');
+    const cmd = input.value.trim();
+    if(!cmd) return;
+    const responses = {
+      'ls': 'src  public  node_modules  package.json  tsconfig.json  next.config.js',
+      'pwd': '/workspace/next-app',
+      'node -v': 'v20.11.0',
+      'npm -v': '10.2.4',
+      'git status': 'On branch main\nChanges not staged:\n  modified: src/app/page.tsx',
+      'git log --oneline': 'a3f2c1d feat: add auth hook\n9b4e2a8 fix: layout padding\n2c8d1f5 init: next.js project',
+      'npm run build': '▲ Next.js 14.2.0\n✓ Compiled successfully\n✓ Linting passed\nRoute (app)  Size\n○ /  5.21 kB\n✓ Build complete',
+      'clear': null,
+    };
+    TERMINAL_HISTORY.push({ type: 'cmd', text: `➜  next-app git:(main) ${cmd}` });
+    if(cmd === 'clear') {
+      TERMINAL_HISTORY.length = 0;
+    } else if(responses[cmd] !== undefined) {
+      TERMINAL_HISTORY.push({ type: 'out', text: responses[cmd] });
+    } else {
+      TERMINAL_HISTORY.push({ type: 'err', text: `zsh: command not found: ${cmd}` });
+    }
+    renderPanel();
+  }
+}
+
+async function sendAIMessage() {
+  const input = document.getElementById('ai-input');
+  const msg = input.value.trim();
+  if(!msg) return;
+  input.value = '';
+
+  const msgs = document.getElementById('ai-messages');
+  const userDiv = document.createElement('div');
+  userDiv.className = 'ai-msg user';
+  userDiv.textContent = msg;
+  msgs.appendChild(userDiv);
+
+  const thinkDiv = document.createElement('div');
+  thinkDiv.className = 'ai-msg thinking';
+  thinkDiv.textContent = '분석 중...';
+  msgs.appendChild(thinkDiv);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  const currentFile = FILES[activeTab];
+  const codeContext = currentFile ? currentFile.lines.map(l => l.replace(/<[^>]+>/g, '')).join('\n') : '';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `당신은 숙련된 TypeScript/Next.js 개발자 AI 어시스턴트입니다. 현재 사용자가 IDE에서 '${activeTab}' 파일을 보고 있습니다.\n\n현재 파일 내용:\n\`\`\`${currentFile?.lang||'text'}\n${codeContext}\n\`\`\`\n\n코드에 대한 질문에 한국어로 간결하게 답변하세요. 코드 예시는 짧게 유지하세요.`,
+        messages: [{ role: 'user', content: msg }]
+      })
+    });
+    const data = await res.json();
+    thinkDiv.remove();
+    const reply = data.content?.[0]?.text || '응답을 받지 못했습니다.';
+    const replyDiv = document.createElement('div');
+    replyDiv.className = 'ai-msg assistant';
+    replyDiv.textContent = reply;
+    msgs.appendChild(replyDiv);
+  } catch(e) {
+    thinkDiv.textContent = '오류가 발생했습니다. API 연결을 확인하세요.';
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function handleAIKey(e) {
+  if(e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendAIMessage();
+  }
+}
+
+document.getElementById('code-content').addEventListener('click', function(e) {
+  const sel = window.getSelection();
+  if(sel && sel.rangeCount > 0) {
+    const range = sel.getRangeAt(0);
+    const lineEl = range.startContainer.parentElement?.closest('[id^="ln"]');
+    if(lineEl) {
+      const ln = parseInt(lineEl.id.replace('ln',''));
+      document.getElementById('sb-cursor').textContent = `Ln ${ln}, Col 1`;
+    }
+  }
+});
+
+renderTree(TREE_STRUCTURE, document.getElementById('file-tree'));
+renderTabs();
+renderEditor();
+renderPanel();
+</script>
